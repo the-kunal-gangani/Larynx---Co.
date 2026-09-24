@@ -45,11 +45,13 @@ A patient records a set of guided phrases before undergoing treatment. Those rec
 |---|---|
 | Backend | FastAPI (Python) |
 | Database & Auth | Supabase (Postgres + Row-Level Security) |
-| Storage | Supabase Storage (private buckets, signed URLs) |
+| Storage | Supabase Storage (private buckets, signed URLs) — training recordings only, never generated output |
 | Voice Cloning | Coqui XTTS-v2 (self-hosted) |
 | Audio Processing | librosa, soundfile |
 | Mobile | Flutter |
 | Web | Next.js |
+| Mobile local history | App documents directory (audio files) + Hive/Isar/sqflite (metadata) |
+| Web local history | IndexedDB (audio as Blob + metadata) |
 | Background Jobs | FastAPI BackgroundTasks / job queue (TBD based on Phase 0 inference benchmarks) |
 
 ---
@@ -59,6 +61,8 @@ A patient records a set of guided phrases before undergoing treatment. Those rec
 ```
 ┌─────────────┐     ┌─────────────┐
 │  Flutter App │     │  Next.js Web │
+│  (local docs ││  (IndexedDB   │
+│   + Hive)    ││   history)    │
 └──────┬──────┘     └──────┬──────┘
        │                   │
        └─────────┬─────────┘
@@ -78,6 +82,8 @@ A patient records a set of guided phrases before undergoing treatment. Those rec
 
 The Voice Engine is wrapped behind a stable internal interface (`clone()`, `synthesize()`) so the underlying model can be swapped without touching anything above it.
 
+Generated speech (TTS output) is streamed directly back to the client and never written to Supabase Storage or any backend table. If a user wants to keep a clip, it saves locally — to the app's documents directory on mobile, or to IndexedDB on web. Only training recordings (`phrase_recordings`) ever touch backend storage, and only until the voice profile finishes training.
+
 ---
 
 ## Project Structure
@@ -93,7 +99,6 @@ larynx-and-co/
 │   │   ├── user.py
 │   │   ├── voice_profile.py
 │   │   ├── recording.py
-│   │   ├── generated_clip.py
 │   │   ├── consent_record.py
 │   │   └── audit_log.py
 │   │
@@ -120,10 +125,10 @@ larynx-and-co/
 │       └── migrations/
 │
 ├── mobile/
-│   └── (Flutter project)
+│   └── (Flutter project — local history via app documents dir + Hive/Isar/sqflite)
 │
 ├── web/
-│   └── (Next.js project)
+│   └── (Next.js project — local history via IndexedDB)
 │
 ├── research/
 │   ├── test_clone.py
@@ -153,7 +158,7 @@ Because this system handles voice identity data, security and consent are design
 - Liveness/ownership verification during recording (randomized phrases, not fixed scripts)
 - Authentication and row-level authorization boundaries per user
 - Private storage buckets, signed and time-limited audio URLs
-- Full voice-profile deletion (raw recordings, trained reference, and generated clips)
+- Full voice-profile deletion (raw recordings and trained reference — generated output was never stored server-side to begin with)
 - Defined raw-recording retention policy
 - Rate limits on both synthesis requests and profile-creation attempts
 - Audit logging for profile creation, synthesis, and deletion events
@@ -175,7 +180,7 @@ FastAPI routes built on top of the now-validated preprocessing and voice engine 
 Guided recording flow first — the highest-friction, most emotionally sensitive part of the product. Then TTS generation and playback. Then the quick-access phrase library for real-world use by patients with limited typing ability.
 
 ### Phase 6 — Polish & Deployment
-Multiple voice profiles per account, generation history, export, and production deployment — including a decision on GPU hosting based on real inference-cost numbers from Phase 0.
+Multiple voice profiles per account, client-side generation history (local documents dir + Hive/Isar/sqflite on mobile, IndexedDB on web), export, and production deployment — including a decision on GPU hosting based on real inference-cost numbers from Phase 0.
 
 ---
 
@@ -187,7 +192,7 @@ This system treats voice recordings as sensitive biometric identity data, not or
 - **Ownership verification** happens at recording time via randomized phrase prompts, making it harder for someone to clone a voice from audio they don't have the right to use.
 - **Access control** is enforced at the database level via row-level security, not just in application code — a backend bug should not be able to leak another user's voice data.
 - **Storage** is private by default; audio is only ever accessed through short-lived signed URLs.
-- **Deletion is real deletion** — removing a voice profile removes the raw recordings, the trained voice reference, and all generated clips tied to it.
+- **Deletion is real deletion** — removing a voice profile removes the raw recordings and the trained voice reference. Generated output audio is never stored server-side, so there's nothing to delete there — clearing it is a purely local/client-side action.
 - **Every sensitive action is audited** — profile creation, synthesis requests, and deletions are logged with user, timestamp, and action for traceability.
 
 Full detail lives in `docs/consent_flow.md` and `docs/retention_policy.md` as those are written out.
