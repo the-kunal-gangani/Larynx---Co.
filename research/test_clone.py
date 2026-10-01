@@ -1,7 +1,14 @@
 import time
 import sys
 from pathlib import Path
+
+import torch
 from TTS.api import TTS
+from TTS.tts.configs.xtts_config import XttsConfig
+from TTS.tts.models.xtts import XttsAudioConfig, XttsArgs
+from TTS.config.shared_configs import BaseDatasetConfig
+
+torch.serialization.add_safe_globals([XttsConfig, XttsAudioConfig, XttsArgs, BaseDatasetConfig])
 
 REFERENCE_SAMPLES_DIR = Path("reference_samples")
 OUTPUT_DIR = Path("test_outputs")
