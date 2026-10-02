@@ -3,8 +3,7 @@ from dataclasses import dataclass
 
 from ml.clone import build_voice_reference, InsufficientSamplesError
 from ml.synthesize import synthesize_speech, SynthesisError
-
-REFERENCES_ROOT = Path("voice_references")
+from config import settings
 
 
 @dataclass
@@ -23,7 +22,7 @@ class SynthesisResult:
 
 def clone(profile_id: str, validated_audio_paths: list[Path]) -> CloneResult:
     try:
-        reference = build_voice_reference(profile_id, validated_audio_paths, REFERENCES_ROOT)
+        reference = build_voice_reference(profile_id, validated_audio_paths, settings.voice_references_root)
         return CloneResult(success=True, voice_model_ref=str(reference.reference_dir), error=None)
     except InsufficientSamplesError as error:
         return CloneResult(success=False, voice_model_ref=None, error=str(error))
