@@ -16,3 +16,16 @@ __pycache__/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Python virtual environment
+research/.venv/
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Environment variables
+.env
+.env.*
