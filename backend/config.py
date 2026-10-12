@@ -10,7 +10,7 @@ load_dotenv()
 class Settings:
     supabase_url: str
     supabase_service_key: str
-    supabase_jwt_secret: str
+    supabase_jwt_secret: str | None
     raw_recordings_tmp_dir: Path
     voice_references_root: Path
     synthesis_tmp_dir: Path
@@ -24,7 +24,7 @@ def load_settings() -> Settings:
     return Settings(
         supabase_url=os.environ["SUPABASE_URL"],
         supabase_service_key=os.environ["SUPABASE_SERVICE_KEY"],
-        supabase_jwt_secret=os.environ["SUPABASE_JWT_SECRET"],
+        supabase_jwt_secret=os.environ.get("SUPABASE_JWT_SECRET") or None,
         raw_recordings_tmp_dir=Path(os.environ.get("RAW_RECORDINGS_TMP_DIR", "tmp/raw_recordings")),
         voice_references_root=Path(os.environ.get("VOICE_REFERENCES_ROOT", "voice_references")),
         synthesis_tmp_dir=Path(os.environ.get("SYNTHESIS_TMP_DIR", "tmp/synthesis")),

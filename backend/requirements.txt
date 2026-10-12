@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard]
 python-multipart
 supabase
-pyjwt
+pyjwt[crypto]
 librosa
 soundfile
 numpy
